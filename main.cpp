@@ -4,7 +4,7 @@
 #include <limits>
 #include "tgaimage.h"
 #include "model.h"
-#include "geometry.h"
+#include "Geometry_Alpha.h"
 #include <algorithm>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
@@ -99,7 +99,7 @@ void line(Vec2i p0, Vec2i p1, TGAImage& image, TGAColor color)
 
 #pragma region CPU
 
-void fillTriangle_EdgeWalking_WithoutZBuffer(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
+void fillTriangle_EdgeWalking_Basic(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
 {
     if (t0.y == t1.y && t0.y == t2.y) return; // I dont care about degenerate triangles 
     // sort the vertices, t0, t1, t2 lower−to−upper (bubblesort yay!) 
@@ -202,7 +202,7 @@ Vec3f barycentric(Vec3i A, Vec3i B, Vec3i C, Vec3i P)
     return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);//得到最终的比例
 }
 
-void fillTriangle_EdgeEquation_WithoutZBuffer(Vec3i* pts, TGAImage& image, TGAColor color) 
+void fillTriangle_EdgeEquation_Basic(Vec3i* pts, TGAImage& image, TGAColor color) 
 {
     Vec2i bboxmin(image.get_width() - 1, image.get_height() - 1);
     Vec2i bboxmax(0, 0);
@@ -314,15 +314,15 @@ void fillObj_randomColor(int& argc, char**& argv,int mode = 1)
             world_icoords[j] = Vec3i((world_coords.x + 1.) * width / 2., (world_coords.y + 1.) * height / 2., world_coords.z);
         }
 
-        if (mode == 1)fillTriangle_EdgeWalking_WithoutZBuffer(screen_coord[0], screen_coord[1], screen_coord[2], image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
-        else fillTriangle_EdgeEquation_WithoutZBuffer(world_icoords, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+        if (mode == 1)fillTriangle_EdgeWalking_Basic(screen_coord[0], screen_coord[1], screen_coord[2], image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+        else fillTriangle_EdgeEquation_Basic(world_icoords, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
     }
 
 
 
 }
 
-void fillObj_FlatShading_EdgeWalking_WithoutZBuffer(int& argc, char**& argv)
+void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
 {
     if (2 == argc)
     {
@@ -358,7 +358,7 @@ void fillObj_FlatShading_EdgeWalking_WithoutZBuffer(int& argc, char**& argv)
 
         if (intensity > 0) 
         {
-            fillTriangle_EdgeWalking_WithoutZBuffer(screen_coords[0], screen_coords[1], screen_coords[2], image,
+            fillTriangle_EdgeWalking_Basic(screen_coords[0], screen_coords[1], screen_coords[2], image,
                 TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
         }
     }
@@ -366,7 +366,7 @@ void fillObj_FlatShading_EdgeWalking_WithoutZBuffer(int& argc, char**& argv)
 }
 
 
-void fillObj_FlatShading_EdgeWalking_ZBuffer(int& argc, char**& argv)
+void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
 {
     if (2 == argc)
     {
@@ -408,33 +408,29 @@ void fillObj_FlatShading_EdgeWalking_ZBuffer(int& argc, char**& argv)
                 TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
     }
 }
-       
+
+
+
 
 
 int main(int argc, char** argv) 
 {
-    //画线的样例
+    ////画线的样例
     //lineTest(image);
-
-    //使用EdgeWalking绘制三角形
-    //fillTriangle_EdgeWalking_WithoutZBuffer(t0[0], t0[1], t0[2], image, red);
-    //fillTriangle_EdgeWalking_WithoutZBuffer(t1[0], t1[1], t1[2], image, white);
-    //fillTriangle_EdgeWalking_WithoutZBuffer(t2[0], t2[1], t2[2], image, green);
-
-    //EdgeEquation绘制三角形
-    //fillTriangle_EdgeEquation_WithoutZBuffer(pts, image, white);
-
-    //绘制wireframe
+    ////使用EdgeWalking绘制三角形
+    //fillTriangle_EdgeWalking_Basic(t0[0], t0[1], t0[2], image, red);
+    //fillTriangle_EdgeWalking_Basic(t1[0], t1[1], t1[2], image, white);
+    //fillTriangle_EdgeWalking_Basic(t2[0], t2[1], t2[2], image, green);
+    ////EdgeEquation绘制三角形
+    //fillTriangle_EdgeEquation_Basic(pts, image, white);
+    ////绘制wireframe
     //drawObjWireFrame_CPU(argc, argv);
-
-    //随机颜色的模型
+    ////随机颜色的模型
     //fillObj_randomColor(argc, argv);
-
-    //基础光照模型
-    //fillObj_FlatShading_EdgeWalking_WithoutZBuffer(argc, argv);
-
-    //加上ZBuffer
-    fillObj_FlatShading_EdgeWalking_ZBuffer(argc, argv);
+    ////基础光照模型
+    //fillObj_FlatShading_EdgeWalking_Basic(argc, argv);
+    ////加上ZBuffer
+    fillObj_FlatShading_EdgeWalking_Z(argc, argv);
 
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
