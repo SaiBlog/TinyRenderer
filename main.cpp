@@ -4,20 +4,32 @@
 #include <limits>
 #include "tgaimage.h"
 #include "model.h"
-#include "Geometry_Alpha.h"
-#include <algorithm>
+#include "geometry.h"
+
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green  = TGAColor(0 , 255,   0,   255);
-
-Model* model = NULL;
 const int width = 800;
 const int height = 800;
+const int depth = 255;
+
+
+#pragma region 全局变量
+Model* model = NULL;
+
+Vec3f light_dir(0, 0, -1); // 一般我们的光源方向都是光照的反方向，方便计算intensity
+Vec3f light_color(255, 170, 0);//落山的太阳
+
+Vec3f camera(0, 0, 3);
 
 TGAImage image(width, height, TGAImage::RGB);
+TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
 
 int* zbuffer = new int[width * height];
+#pragma endregion
+
+
 
 Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
 Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
@@ -26,12 +38,54 @@ Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
 //Vec3i pts[3] = { Vec3i(10,10,0), Vec3i(100, 10,0), Vec3i(190, 10,0) };//退化的三角形
 Vec3i pts[3] = { Vec3i(10,10,0), Vec3i(100, 30,0), Vec3i(190, 160,0) };
 
+
+
 #pragma region Helper
 Vec3f world2screen(Vec3f v) 
 {
     return Vec3f(int((v.x + 1.) * width / 2. + .5), int((v.y + 1.) * height / 2. + .5), v.z);
 }
+
+Vec3f cross(Vec3f v1, Vec3f v2)
+{
+    return Vec3f(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
+}
+
+Vec3f m2v(Matrix m)
+{
+    return Vec3f(m[0][0] / m[3][0], m[1][0] / m[3][0], m[2][0] / m[3][0]);
+}
+
+Matrix v2m(Vec3f v)
+{
+    Matrix m(4, 1);
+    m[0][0] = v.x;
+    m[1][0] = v.y;
+    m[2][0] = v.z;
+    m[3][0] = 1.f;
+    return m;
+}
 #pragma endregion
+
+
+#pragma region Transformation
+
+Matrix viewport(int x, int y, int w, int h) 
+{
+    Matrix m = Matrix::identity(4);
+    m[0][3] = x + w / 2.f;
+    m[1][3] = y + h / 2.f;
+    m[2][3] = depth / 2.f;
+
+    m[0][0] = w / 2.f;
+    m[1][1] = h / 2.f;
+    m[2][2] = depth / 2.f;
+    return m;
+}
+
+#pragma endregion
+
+
 
 
 //----------------------------------------------------------------------------
@@ -159,6 +213,48 @@ void drawObjWireFrame_CPU(int& argc, char**& argv)
     }
 }
 
+void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
+{
+    if (2 == argc)
+    {
+        model = new Model(argv[1]);
+    }
+    else
+    {
+        model = new Model("obj/african_head.obj");
+    }
+
+
+    for (int i = 0; i < model->nfaces(); i++)
+    {
+        std::vector<int> face = model->face(i);
+
+        Vec2i screen_coords[3];
+        Vec3f world_coords[3];
+
+        for (int j = 0; j < 3; j++)
+        {
+            Vec3f v = model->vert(face[j]);
+
+            screen_coords[j] = Vec2i((v.x + 1.) * width / 2., (v.y + 1.) * height / 2.);
+            world_coords[j] = v;
+        }
+
+        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
+        n.normalize();
+
+        float intensity = n * light_dir;//喜闻乐见
+
+        if (intensity > 0)
+        {
+            fillTriangle_EdgeWalking_Basic(screen_coords[0], screen_coords[1], screen_coords[2], image,
+                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
+        }
+    }
+
+}
+
+
 
 #pragma endregion
 
@@ -231,8 +327,9 @@ void fillTriangle_EdgeEquation_Basic(Vec3i* pts, TGAImage& image, TGAColor color
     }
 }
 
-void fillTriangle_EdgeEquation_WithZBuffer(Vec3f* pts, float* zbuffer, TGAImage& image, TGAColor color)
+void fillTriangle_EdgeEquation_Z(Vec3f* pts, float* zbuffer, TGAImage& image, TGAColor color)
 {
+
     Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
     Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
@@ -252,6 +349,8 @@ void fillTriangle_EdgeEquation_WithZBuffer(Vec3f* pts, float* zbuffer, TGAImage&
     {
         for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
         {
+            std::cout << "------------------------------------" << std::endl;
+
             Vec3f bc_screen = barycentric(pts[0], pts[1], pts[2], P);
             if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
 
@@ -271,6 +370,48 @@ void fillTriangle_EdgeEquation_WithZBuffer(Vec3f* pts, float* zbuffer, TGAImage&
 #pragma endregion
 
 
+void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
+{
+
+
+    if (2 == argc)
+    {
+        model = new Model(argv[1]);
+    }
+    else
+    {
+        model = new Model("obj/african_head.obj");
+    }
+
+    float* zbuffer = new float[width * height];
+    for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());//初始化为负无穷
+
+    for (int i = 0; i < model->nfaces(); i++)
+    {
+
+        Vec3f screen_coords[3];
+        Vec3f world_coords[3];
+        std::vector<int> face = model->face(i);
+
+        for (int j = 0; j < 3; j++)
+        {
+            Vec3f v = model->vert(face[j]);
+            world_coords[j] = v;
+
+            screen_coords[j] = world2screen(v);//z轴不变，将x、y转换为屏幕坐标
+        }
+
+        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
+        n.normalize();
+
+        float intensity = n * light_dir;//喜闻乐见
+
+        if (intensity > 0)
+            fillTriangle_EdgeEquation_Z(screen_coords, zbuffer, image,
+                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
+    }
+}
+
 //----------------------------------------------------------------------------
 
 //测试drawline的漏洞
@@ -286,7 +427,6 @@ void lineTest(TGAImage& image)
     Bresenham_DrawLine(790, 201, 739, 191, image, red);
     Bresenham_DrawLine(790, 301, 780, 251, image, red);
 }
-
 
 // 默认使用CPU方式绘制颜色
 void fillObj_randomColor(int& argc, char**& argv,int mode = 1)
@@ -322,94 +462,6 @@ void fillObj_randomColor(int& argc, char**& argv,int mode = 1)
 
 }
 
-void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
-{
-    if (2 == argc)
-    {
-        model = new Model(argv[1]);
-    }
-    else
-    {
-        model = new Model("obj/african_head.obj");
-    }
-
-    Vec3f light_dir(0, 0, -1); // 一般我们的光源方向都是光照的反方向，方便计算intensity
-    Vec3f light_color(255, 170, 0);//落山的太阳
-
-    for (int i = 0; i < model->nfaces(); i++) 
-    {
-        std::vector<int> face = model->face(i);
-
-        Vec2i screen_coords[3];
-        Vec3f world_coords[3];
-
-        for (int j = 0; j < 3; j++) 
-        {
-            Vec3f v = model->vert(face[j]);
-
-            screen_coords[j] = Vec2i((v.x + 1.) * width / 2., (v.y + 1.) * height / 2.);
-            world_coords[j] = v;
-        }
-        
-        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
-        n.normalize();
-
-        float intensity = n * light_dir;//喜闻乐见
-
-        if (intensity > 0) 
-        {
-            fillTriangle_EdgeWalking_Basic(screen_coords[0], screen_coords[1], screen_coords[2], image,
-                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
-        }
-    }
-
-}
-
-
-void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
-{
-    if (2 == argc)
-    {
-        model = new Model(argv[1]);
-    }
-    else
-    {
-        model = new Model("obj/african_head.obj");
-    }
-
-    Vec3f light_dir(0, 0, -1); // 一般我们的光源方向都是光照的反方向，方便计算intensity
-    Vec3f light_color(255, 170, 0);//落山的太阳
-
-    float* zbuffer = new float[width * height];
-    for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());
-
-    for (int i = 0; i < model->nfaces(); i++)
-    {
-
-        Vec3f screen_coords[3];
-        Vec3f world_coords[3];
-        std::vector<int> face = model->face(i);
-
-        for (int j = 0; j < 3; j++)
-        {
-            Vec3f v = model->vert(face[j]);
-            world_coords[j] = v;
-
-            screen_coords[j] = world2screen(v);//z轴不变，将x、y转换为屏幕坐标
-        }
-
-        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
-        n.normalize();
-
-        float intensity = n * light_dir;//喜闻乐见
-        
-        if(intensity>0)
-        fillTriangle_EdgeEquation_WithZBuffer(screen_coords, zbuffer, image,
-                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
-    }
-}
-
-
 
 
 
@@ -429,8 +481,11 @@ int main(int argc, char** argv)
     //fillObj_randomColor(argc, argv);
     ////基础光照模型
     //fillObj_FlatShading_EdgeWalking_Basic(argc, argv);
-    ////加上ZBuffer
+    //加上ZBuffer
+    for (int i = width * height; i--; zbuffer[i] = -3200);
     fillObj_FlatShading_EdgeWalking_Z(argc, argv);
+    
+
 
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
