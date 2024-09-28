@@ -10,6 +10,7 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green  = TGAColor(0 , 255,   0,   255);
+
 const int width = 800;
 const int height = 800;
 const int depth = 255;
@@ -26,7 +27,9 @@ Vec3f camera(0, 0, 3);
 TGAImage image(width, height, TGAImage::RGB);
 TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
 
-int* zbuffer = new int[width * height];
+//int* zbuffer = new int[width * height];
+
+float* zbuffer = new float[width * height];
 #pragma endregion
 
 
@@ -329,27 +332,27 @@ void fillTriangle_EdgeEquation_Basic(Vec3i* pts, TGAImage& image, TGAColor color
 
 void fillTriangle_EdgeEquation_Z(Vec3f* pts, float* zbuffer, TGAImage& image, TGAColor color)
 {
-
     Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
     Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
 
     for (int i = 0; i < 3; i++)
     {
-        for (int j = 0; j < 2; j++)
-        {
-            bboxmin[j] = std::max(0.f, std::min(bboxmin[j], pts[i][j]));
-            bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j]));
-        }
+        bboxmin.x = std::max(0.f, std::min(bboxmin.x, pts[i][0]));
+        bboxmax.x = std::min(clamp[0], std::max(bboxmax.x, pts[i][0]));
+
+        bboxmin.y = std::max(0.f, std::min(bboxmin.y, pts[i][1]));
+        bboxmax.y = std::min(clamp[1], std::max(bboxmax.y, pts[i][1]));
     }
 
+
     Vec3f P;
+
 
     for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
     {
         for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
         {
-            std::cout << "------------------------------------" << std::endl;
 
             Vec3f bc_screen = barycentric(pts[0], pts[1], pts[2], P);
             if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
@@ -372,8 +375,6 @@ void fillTriangle_EdgeEquation_Z(Vec3f* pts, float* zbuffer, TGAImage& image, TG
 
 void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
 {
-
-
     if (2 == argc)
     {
         model = new Model(argv[1]);
@@ -383,7 +384,6 @@ void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
         model = new Model("obj/african_head.obj");
     }
 
-    float* zbuffer = new float[width * height];
     for (int i = width * height; i--; zbuffer[i] = -std::numeric_limits<float>::max());//初始化为负无穷
 
     for (int i = 0; i < model->nfaces(); i++)
@@ -406,9 +406,18 @@ void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
 
         float intensity = n * light_dir;//喜闻乐见
 
+        //for (int i = 0; i < 3; i++)
+        //{
+        //    for (int j = 0; j < 3;j++)std::cout << screen_coords[i][j] << ' ';
+        //    std::cout << std::endl;
+        //}
+        //std::cout << std::endl;
+
         if (intensity > 0)
+        {
             fillTriangle_EdgeEquation_Z(screen_coords, zbuffer, image,
                 TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
+        }
     }
 }
 
@@ -482,8 +491,7 @@ int main(int argc, char** argv)
     ////基础光照模型
     //fillObj_FlatShading_EdgeWalking_Basic(argc, argv);
     //加上ZBuffer
-    for (int i = width * height; i--; zbuffer[i] = -3200);
-    fillObj_FlatShading_EdgeWalking_Z(argc, argv);
+    //fillObj_FlatShading_EdgeWalking_Z(argc, argv);
     
 
 
@@ -491,8 +499,10 @@ int main(int argc, char** argv)
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
 
-    delete model;
 
+
+    delete model;
+    delete[] zbuffer;
     return 0;
 }
 

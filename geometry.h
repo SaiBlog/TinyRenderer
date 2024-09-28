@@ -1,10 +1,6 @@
 #ifndef __GEOMETRY_H__
 #define __GEOMETRY_H__
 #include <cmath>
-#include <vector>
-#include <cassert>
-#include <iostream>
-
 
 
 template <class t> struct Vec2
@@ -62,12 +58,14 @@ template <> template <> Vec3<int>::Vec3(const Vec3<float>& v);
 template <> template <> Vec3<float>::Vec3(const Vec3<int>& v);
 
 
-template <class t> std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
+template <class t>
+std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
     s << "(" << v.x << ", " << v.y << ")\n";
     return s;
 }
 
-template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
+template <class t> 
+std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
     s << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
     return s;
 }
@@ -100,4 +98,6 @@ public:
 
     friend std::ostream& operator<<(std::ostream& s, Matrix& m);
 };
+
+
 #endif //__GEOMETRY_H__
