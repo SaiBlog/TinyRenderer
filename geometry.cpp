@@ -14,18 +14,23 @@ Vec3<float>::Vec3(const Vec3<int>& v) : x(v.x), y(v.y), z(v.z) {}
 Matrix::Matrix(int r, int c) :
     m(std::vector<std::vector<float> >(r, std::vector<float>(c, 0.f))), rows(r), cols(c) { }
 
-int Matrix::nrows() {
+int Matrix::nrows() 
+{
     return rows;
 }
 
-int Matrix::ncols() {
+int Matrix::ncols() 
+{
     return cols;
 }
 
-Matrix Matrix::identity(int dimensions) {
+Matrix Matrix::identity(int dimensions) 
+{
     Matrix E(dimensions, dimensions);
-    for (int i = 0; i < dimensions; i++) {
-        for (int j = 0; j < dimensions; j++) {
+    for (int i = 0; i < dimensions; i++) 
+    {
+        for (int j = 0; j < dimensions; j++) 
+        {
             E[i][j] = (i == j ? 1.f : 0.f);
         }
     }

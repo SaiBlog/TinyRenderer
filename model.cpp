@@ -70,6 +70,8 @@ Model::Model(const char* filename) : verts_(), faces_()
     std::cerr << "# v# " << verts_.size() << " f# " << faces_.size() << std::endl;
 
     load_texture(filename, "_diffuse.tga", diffusemap_);
+
+
 }
 
 Model::~Model() 
@@ -119,6 +121,6 @@ TGAColor Model::diffuse(Vec2i uv)
 
 Vec2i Model::uv(int iface, int nvert) 
 {
-    int idx = faces_[iface][nvert][1];
+    int idx = faces_[iface][nvert][1];//¶ÁÈ¡vt 
     return Vec2i(uv_[idx].x * diffusemap_.get_width(), uv_[idx].y * diffusemap_.get_height());
 }

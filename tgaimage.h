@@ -70,7 +70,8 @@ protected:
 	bool   load_rle_data(std::ifstream& in);
 	bool unload_rle_data(std::ofstream& out);
 public:
-	enum Format {
+	enum Format 
+	{
 		GRAYSCALE = 1, RGB = 3, RGBA = 4
 	};
 
