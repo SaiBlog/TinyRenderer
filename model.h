@@ -24,6 +24,7 @@ private:
 	//读取纹理图的信息
 	void load_texture(std::string filename, const char* suffix, TGAImage& img);
 
+
 public:
 
 	//构造函数从文件路径读取obj文件
@@ -45,6 +46,8 @@ public:
 	Vec2i uv(int iface, int nvert);
 	//根据UV坐标读取纹理图信息
 	TGAColor diffuse(Vec2i uv);
+
+	Vec3f norm(int iface, int nvert);
 };
 
 #endif //__MODEL_H__
