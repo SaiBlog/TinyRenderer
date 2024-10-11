@@ -46,7 +46,7 @@ public:
 	Vec2i uv(int iface, int nvert);
 	//根据UV坐标读取纹理图信息
 	TGAColor diffuse(Vec2i uv);
-
+	//根据面索引和顶点索引获取法线
 	Vec3f norm(int iface, int nvert);
 };
 
