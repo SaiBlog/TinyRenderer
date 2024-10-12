@@ -20,7 +20,8 @@ const int depth = 255;
 #pragma region 全局变量
 Model* model = NULL;
 
-Vec3f light_dir = Vec3f(0.5, 1, 1).normalize();
+Vec3f light_dir1 = Vec3f(0, 0, -1).normalize();
+Vec3f light_dir2 = Vec3f(0.5, 1, 1).normalize();
 //Vec3f light_color(255, 170, 0);//落山的太阳
 Vec3f light_color(255, 255, 255);//白光
 
@@ -275,7 +276,7 @@ void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
         Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
         n.normalize();
 
-        float intensity = n * light_dir;//喜闻乐见
+        float intensity = n * light_dir1;//喜闻乐见
 
         if (intensity > 0)
         {
@@ -286,53 +287,6 @@ void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
 
 }
 
-void fillObj_FlatShading_EdgeWalking_Z(int& argc, char**& argv)
-{
-    if (2 == argc)
-    {
-        model = new Model(argv[1]);
-    }
-    else
-    {
-        model = new Model("obj/african_head.obj");
-    }
-
-    for (int i = width * height; i--; fzbuffer[i] = -std::numeric_limits<float>::max());//初始化为负无穷
-
-    for (int i = 0; i < model->nfaces(); i++)
-    {
-
-        Vec3f screen_coords[3];
-        Vec3f world_coords[3];
-        std::vector<int> face = model->face(i);
-
-        for (int j = 0; j < 3; j++)
-        {
-            Vec3f v = model->vert(face[j]);
-            world_coords[j] = v;
-
-            screen_coords[j] = world2screen(v);//z轴不变，将x、y转换为屏幕坐标
-        }
-
-        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
-        n.normalize();
-
-        float intensity = n * light_dir;//喜闻乐见
-
-        //for (int i = 0; i < 3; i++)
-        //{
-        //    for (int j = 0; j < 3;j++)std::cout << screen_coords[i][j] << ' ';
-        //    std::cout << std::endl;
-        //}
-        //std::cout << std::endl;
-
-        if (intensity > 0)
-        {
-            fillTriangle_EdgeEquation_Z(screen_coords, fzbuffer, image,
-                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
-        }
-    }
-}
 
 void fillTriangle_EdgeWalking_Z_UV(Vec3i t0, Vec3i t1, Vec3i t2, Vec2i uv0, Vec2i uv1, Vec2i uv2, TGAImage& image, float intensity, float* fzbuffer)
 {
@@ -425,7 +379,7 @@ void fillObj_EdgeWalking_Z_UV_Projection(int argc, char** argv)
             Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
             n.normalize();
 
-            float intensity = n * light_dir;
+            float intensity = n * light_dir1;
 
             if (intensity > 0)
             {
@@ -557,7 +511,7 @@ void fillObj_EdgeWalking_Z_UV_MVP(int argc, char** argv)
                 screen_coords[j] = Vec3f(ViewPort * Projection * ModelView * Matrix(v));
                 world_coords[j] = v;
 
-                intensity[j] = model->norm(i, j) * light_dir;
+                intensity[j] = model->norm(i, j) * light_dir2;
             }
 
             Vec2i uv[3];
@@ -683,6 +637,54 @@ void fillTriangle_EdgeEquation_Z(Vec3f* pts, float* fzbuffer, TGAImage& image, T
     }
 }
 
+void fillObj_FlatShading_Equation_Z(int& argc, char**& argv)
+{
+    if (2 == argc)
+    {
+        model = new Model(argv[1]);
+    }
+    else
+    {
+        model = new Model("obj/african_head.obj");
+    }
+
+    for (int i = width * height; i--; fzbuffer[i] = -std::numeric_limits<float>::max());//初始化为负无穷
+
+    for (int i = 0; i < model->nfaces(); i++)
+    {
+
+        Vec3f screen_coords[3];
+        Vec3f world_coords[3];
+        std::vector<int> face = model->face(i);
+
+        for (int j = 0; j < 3; j++)
+        {
+            Vec3f v = model->vert(face[j]);
+            world_coords[j] = v;
+
+            screen_coords[j] = world2screen(v);//z轴不变，将x、y转换为屏幕坐标
+        }
+
+        Vec3f n = cross((world_coords[2] - world_coords[0]), (world_coords[1] - world_coords[0])); //计算三角形的法向量
+        n.normalize();
+
+        float intensity = n * light_dir1;//喜闻乐见
+
+        //for (int i = 0; i < 3; i++)
+        //{
+        //    for (int j = 0; j < 3;j++)std::cout << screen_coords[i][j] << ' ';
+        //    std::cout << std::endl;
+        //}
+        //std::cout << std::endl;
+
+        if (intensity > 0)
+        {
+            fillTriangle_EdgeEquation_Z(screen_coords, fzbuffer, image,
+                TGAColor(intensity * light_color.x, intensity * light_color.y, intensity * light_color.z, 255));
+        }
+    }
+}
+
 #pragma endregion
 
 
@@ -740,25 +742,25 @@ void fillObj_randomColor(int& argc, char**& argv,int mode = 1)
 
 int main(int argc, char** argv) 
 {
-    ////画线的样例
+    //画线的样例
     //lineTest(image);
-    ////使用EdgeWalking绘制三角形
+    //使用EdgeWalking绘制三角形
     //fillTriangle_EdgeWalking_Basic(t0[0], t0[1], t0[2], image, red);
     //fillTriangle_EdgeWalking_Basic(t1[0], t1[1], t1[2], image, white);
     //fillTriangle_EdgeWalking_Basic(t2[0], t2[1], t2[2], image, green);
-    ////EdgeEquation绘制三角形
+    //EdgeEquation绘制三角形
     //fillTriangle_EdgeEquation_Basic(pts, image, white);
-    ////绘制wireframe
+    //绘制wireframe
     //drawObjWireFrame_CPU(argc, argv);
-    ////随机颜色的模型
+    //随机颜色的模型
     //fillObj_randomColor(argc, argv);
-    ////基础光照模型
+    //基础光照模型
     //fillObj_FlatShading_EdgeWalking_Basic(argc, argv);
-    ////加上ZBuffer
-    //fillObj_FlatShading_EdgeWalking_Z(argc, argv);
-    ////透视投影+UV
+    //加上ZBuffer
+    //fillObj_FlatShading_Equation_Z(argc, argv);
+    //透视投影+UV
     //fillObj_EdgeWalking_Z_UV_Projection(argc, argv);
-    ////相机自由位置+UV
+    //相机自由位置+UV
     //fillObj_EdgeWalking_Z_UV_MVP(argc, argv);
 
 
