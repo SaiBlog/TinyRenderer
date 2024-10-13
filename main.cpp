@@ -163,6 +163,7 @@ void Bresenham_DrawLine(int x0, int y0, int x1, int y1, TGAImage& image, TGAColo
         {
             image.set(x, y, color);
         }
+
         error2 += derror2;
 
         if (error2 > dx)
@@ -287,7 +288,6 @@ void fillObj_FlatShading_EdgeWalking_Basic(int& argc, char**& argv)
 
 }
 
-
 void fillTriangle_EdgeWalking_Z_UV(Vec3i t0, Vec3i t1, Vec3i t2, Vec2i uv0, Vec2i uv1, Vec2i uv2, TGAImage& image, float intensity, float* fzbuffer)
 {
     if (t0.y == t1.y && t0.y == t2.y) return; // i dont care about degenerate triangles
@@ -347,7 +347,6 @@ void fillObj_EdgeWalking_Z_UV_Projection(int argc, char** argv)
         model = new Model("obj/african_head.obj");
     }
 
-    fzbuffer = new float[width * height];
 
     for (int i = 0; i < width * height; i++)
     {
@@ -752,8 +751,10 @@ int main(int argc, char** argv)
     //fillTriangle_EdgeEquation_Basic(pts, image, white);
     //绘制wireframe
     //drawObjWireFrame_CPU(argc, argv);
+    
     //随机颜色的模型
     //fillObj_randomColor(argc, argv);
+    
     //基础光照模型
     //fillObj_FlatShading_EdgeWalking_Basic(argc, argv);
     //加上ZBuffer
